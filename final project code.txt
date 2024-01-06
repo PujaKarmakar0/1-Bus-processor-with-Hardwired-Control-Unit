@@ -1,0 +1,423 @@
+--University of Bahrain
+--ITCE364 Final Project 2022
+--Team Members:
+--PUJA KARMAKAR 20194981
+--WEAAM WAFEEQ OMRAN AJOOR 20196537
+--ZAINAB REDHA EBRAHIM MATROOK 20195982
+
+
+----------Control_unit code
+
+Library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_arith.all;
+use ieee.std_logic_unsigned.all;
+use ieee.std_logic_1164.all;
+ 
+entity control_unit is
+   port
+   (
+  	clk: in   std_logic;
+	IR:  in   std_logic_vector (31 downto 0);
+	PCout, PCin, MAin, MDout,  MDin, MDbus:  out  std_logic;
+	Cout, Cin, C1out, C2out, Gra, Grb, Grc, CONin, n:  out  std_logic;
+	IRin, Rout, Rin, Ld:  out  std_logic;
+	INC4, END_sig, ADD, SUB, OR_sig:  out  std_logic;
+	Read_sig, Write_sig, Wait_sig, Goto6, C_B, Decr: out std_logic;
+	Ain, Bin, BAout, AND_sig, SHC:  out  std_logic;
+      Result: out std_logic_vector (4 downto 0)
+   );
+
+end control_unit;
+
+
+architecture Behavioral of control_unit is
+    Signal Op: std_logic_vector (4 downto 0);
+	 Signal T: integer range 0 to 7 := 0;--steps
+
+Begin
+   Op <= IR(31 downto 27);
+
+   process(clk,Op)
+	Variable x: integer range 0 to 31; --instructions
+	
+	Begin
+
+ --Add, Or, Sub, And, Addi , Ld, St, Lar, Brlpl, Brlmi, Stop, Nop, Shc.
+
+          Case Op is 
+			   When "00000" => x:= 0; --nop
+			   When "00001" => x:= 1; --ld
+			   When "00011" => x:= 3; --st
+				When "00110" => x:= 6; --lar
+				When "01100" => x:= 12;--add
+				When "01101" => x:= 13;--addi
+				When "01110" => x:= 14;--sub
+				When "10010" => x:= 18;--brlpl
+				When "10011" => x:= 19;--brlmi
+				When "10100" => x:= 20;--and
+				When "10110" => x:= 22;--or
+				When "11101" => x:= 29;--shc
+				When "11111" => x:= 31;--stop
+				When others => null;
+				end case;
+
+
+--Output control signals: 
+			
+			
+		if (clk'event AND clk = '1') then
+		
+		PCout<='0'; PCin<='0'; MAin<='0'; MDout<='0';  MDin<='0'; 
+		MDbus<='0'; Cout<='0'; Cin<='0'; C1out<='0'; C2out<='0'; 
+	     Gra<='0'; Grb<='0'; Grc<='0'; CONin<='0'; n<='0'; 
+		Rout<='0'; IRin<='0'; Rout<='0'; Rin<='0'; Ld<='0'; 
+		INC4<='0'; END_sig<='0'; ADD<='0'; SUB<='0'; OR_sig<='0';
+		Read_sig<='0'; Write_sig<='0'; Wait_sig<='0'; Goto6<='0'; Ain<='0'; Decr <='0';
+		Bin<='0'; BAout<='0'; OR_sig<='0'; AND_sig<='0'; SHC<='0'; C_B<='0';
+			
+     
+		if (T = 0 ) then --instruction fetch step 1
+		if (x=0 or x=1 or x=3 or x=6 or x=12 or x=13 or x=14 or x=18 or x=19 or x=20 or x=22 or x=29 or x=31) then
+		PCout<='1'; MAin<='1'; INC4<='1'; Cin<='1'; 
+		end if;
+
+		
+		elsif (T = 1) then --instruction fetch step 2
+		if (x=0 or x=1 or x=3 or x=6 or x=12 or x=13 or x=14 or x=18 or x=19 or x=20 or x=22 or x=29 or x=31) then
+		Read_sig<='1'; Wait_sig<='1'; Cout<='1'; PCin<='1';  
+		end if;
+
+		
+		elsif (T = 2) then--instruction fetch step 3
+		if (x=0 or x=1 or x=3 or x=6 or x=12 or x=13 or x=14 or x=18 or x=19 or x=20 or x=22 or x=29 or x=31) then
+		MDout<='1'; IRin<='1';
+	     end if;	
+
+		
+		elsif (T = 3) then
+		If (x=1 or x=3) then                     Grb<='1'; BAout<='1'; Ain<='1'; 
+		elsIf (x=6) then                         PCout<='1'; Ain<='1'; 
+		elsif (x=29) then                        C1out<='1'; Ld<='1';
+		elsIf (x=18 or x=19) then                Grc<='1'; Rout<='1'; CONin<='1';      
+		elsif (x=12 or x=13 or x=14 or x=20 or x=22) then Grb<='1'; Rout<='1'; Ain<='1'; 
+		else END_sig<='1';
+		end if;
+
+		
+		elsif (T = 4) then
+		If (x=1 or x=3 or x=13) then C2out<='1'; ADD<='1'; Cin<='1';
+		elsIf (x=6) then             C1out<='1'; ADD<='1'; Cin<='1';
+		elsIf (x=12 or x=20) then    Grc<='1'; Rout<='1'; ADD<='1'; Cin<='1';
+		elsIf (x=14) then            Grc<='1'; Rout<='1'; SUB<='1'; Cin<='1';
+		elsIf (x=18 or x=19) then    PCout<='1'; Gra<='1'; Rin<='1';
+		elsIf (x=22) then            Grc<='1'; Rout<='1'; OR_sig<='1'; Cin<='1';
+		elsif (x=29) then            n<='1'; Grc<='1'; Rout<='1'; Ld<='1'; 
+		else END_sig<='1';
+		end if;
+
+		
+		elsif (T = 5) then
+		If (x=1 or x=3) then                            Cout<='1'; MAin<='1';
+		elsIf (x=6 or x=12 or x=13 or x=14 or x=20 or x=22) then  Cout<='1'; Gra<='1'; Rin<='1'; END_sig<='1';        
+		elsif (x=29) then                               Grb<='1'; Rout<='1'; C_B<='1'; Cin<='1';
+		else END_sig<='1';
+		end if;
+
+
+		elsif (T = 6) then
+		If (x=1) then      Read_sig<='1'; Wait_sig<='1';
+		elsif (x=3) then   Gra<='1';  Rout<='1'; MDbus<='1'; 
+		elsif (x=29) then  n<='1'; Cout<='1'; SHC<='1'; Cin<='1'; Decr<='1'; Goto6<='1';
+		else END_sig<='1';
+		end if;
+
+
+		elsif (t = 7) then                   
+		If (x=1) then      MDout<='1'; Gra<='1'; Rin<='1'; END_sig<='1';
+		elsIf (x=3) then   Write_sig<='1'; Wait_sig<='1'; END_sig<='1';
+		elsif (x=29) then  Cout<='1'; Gra<='1'; Rin<='1'; END_sig<='1';
+		else END_sig<='1';
+		end if;
+		
+		T <= T+1;
+		end if;
+		end if;
+Result<=Op;
+end process;
+end behavioral;
+			
+
+
+------------------------ALU code
+
+Library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_arith.all;
+use ieee.std_logic_unsigned.all;
+use ieee.std_logic_1164.all;
+ 
+entity ALU is
+   port
+   (  	  
+	            clk: in   std_logic;
+	         Bus_32: in   std_logic_vector (31 downto 0);
+				     A: in   std_logic_vector (31 downto 0);
+   n, ADD, SUB, AND_sig, OR_sig, SHC, C_B, INC4: in std_logic;
+			        C: out std_logic_vector (31 downto 0)		
+   );
+	
+end ALU;
+
+
+architecture Behavioral of ALU is
+Signal C_sig: std_logic_vector(31 downto 0);
+Begin
+
+Process (clk, n, ADD, SUB, AND_sig, OR_sig, SHC, C_B, INC4)
+Begin
+        if (clk'event AND clk = '1') then
+		      if (ADD='1') then 
+				   C_sig<=Bus_32 + A;
+					
+			   elsif (SUB='1') then
+				   C_sig<=Bus_32 - A;
+					
+				elsif (INC4='1') then
+				   C_sig<=Bus_32 + 4;
+					
+				elsif (AND_sig='1') then
+				   C_sig<=A and Bus_32;
+					
+				elsif (OR_sig='1') then
+				   C_sig<=A or Bus_32;
+					
+				elsif (SHC='1') then
+				if (n='0') then --no shift circular is operated as n=0 
+					 C<= C_sig;
+				else 
+					  C_sig<= (C_sig(30 downto 0)& C_sig(31));
+				end if;
+					
+				elsif (C_B='1') then
+				     C_sig<= Bus_32;
+			
+			end if;
+			end if;
+			C<= C_sig;
+			
+end process;
+end behavioral;
+			
+
+
+---------------------------register_file code
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+USE ieee.numeric_std.ALL;
+
+entity register_file is
+    Port ( 
+			  Bus_32_in :in  STD_LOGIC_VECTOR (31 downto 0):= x"00000002";
+			  Rin : in  STD_LOGIC;
+           Rout : in  STD_LOGIC;
+           BAout : in  STD_LOGIC;
+           Gra : in  STD_LOGIC;
+           Grb : in  STD_LOGIC;
+           Grc : in  STD_LOGIC;
+           IR : in  STD_LOGIC_VECTOR (31 downto 0):=x"00000004";
+           Bus_32_out : out  STD_LOGIC_VECTOR (31 downto 0)
+			 );
+end register_file;
+
+architecture Behavioral of register_file is
+signal reg : std_logic_vector (4 downto 0);  
+type reg_array is array(0 to 23) of std_logic_vector(31 downto 0); 
+signal myreg : reg_array:=(x"00000000", x"00000001", x"00000002", x"00000003", x"00000004" , x"00000005", x"00000006",x"00000007", x"00000008", x"00000009", x"00000010", x"00000011" , x"00000012", x"00000013",x"00000014", x"00000015", 
+x"00000016", x"00000017", x"00000018" , x"00000019", x"00000020" ,x"00000021", x"00000022", x"00000023");
+
+begin
+
+Bus_32_out <= x"00000000" when (BAout = '1' and Grb = '1' and IR(21 downto 17) ="00000")else 
+myreg(to_integer(unsigned(IR(21 downto 17)))) when (BAout = '1' and Grb = '1' and IR(21 downto 17) /="00000") else			
+myreg(to_integer(unsigned(IR(26 downto 22)))) When (Rout ='1' and Gra = '1') else
+myreg(to_integer(unsigned(IR(21 downto 17)))) When (Rout ='1' and Grb = '1') else
+myreg(to_integer(unsigned(IR(16 downto 12)))) When (Rout ='1' and Grc = '1');
+
+
+Reg <= IR(26 downto 22) when Gra ='1' else 
+		 IR(21 downto 17) when Grb ='1' else
+		 IR(16 downto 12) when Grc ='1' else
+		 IR(26 downto 22); -- default value.
+
+myreg(to_integer(unsigned(Reg))) <= Bus_32_in when  (Rin ='1');
+
+
+end Behavioral;
+
+
+
+---------------------------------Datapath code
+
+Library ieee;
+use ieee.std_logic_unsigned.all;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_arith.all;
+
+entity Datapath is
+   port(  
+	clk_datapath: in std_logic;
+	PCout, PCin, MAin, MDout,  MDin, MDbus:  in std_logic;
+	Cout, Cin, C1out, C2out, Gra, Grb, Grc, CONin, n:  in std_logic;
+	IRin, Rout, Rin, Ld:  in  std_logic;
+	INC4, END_sig, ADD, SUB, OR_sig:  in  std_logic;
+	Read_sig, Write_sig, C_B, Decr, Goto6: in std_logic;
+	Ain, Bin, Wait_sig,BAout, AND_sig, SHC:  in  std_logic;
+	Opcode: out std_logic_vector(4 downto 0));
+end Datapath;
+
+
+architecture Behavioral of Datapath is
+
+COMPONENT ALU is
+   port
+   (  	  
+  clk: in   std_logic;
+  Bus_32: in   std_logic_vector (31 downto 0);
+	A: in   std_logic_vector (31 downto 0);
+   n, ADD, SUB, AND_sig, OR_sig, SHC, C_B, INC4: in std_logic;
+   C: out std_logic_vector (31 downto 0)		
+   );	
+end COMPONENT; 
+
+
+COMPONENT  register_file is
+   port(
+	Rin:  in   std_logic;
+  	Gra: in std_logic;
+Grb: in std_logic;
+Grc: in std_logic;
+Rout:  in   std_logic;
+BAout: in   std_logic;
+IR: in   std_logic_vector (31 downto 0); 
+Bus_32_in: in   std_logic_vector (31 downto 0);
+Bus_32_out: out std_logic_vector (31 downto 0)	
+   );
+end COMPONENT; 
+
+
+COMPONENT  memory is
+   port(
+	clk: in  std_logic;
+	MAin: in  std_logic;
+	MDin, MDout, write_sig, read_sig:in  std_logic;
+	datain:   in  std_logic_vector(31 downto 0); --input of MA
+	datain1:  in  std_logic_vector(31 downto 0); 
+	dataout:  out std_logic_vector(31 downto 0); --output of MA
+	dataout1: out std_logic_vector(31 downto 0)
+);
+end COMPONENT;
+
+COMPONENT control_unit is
+   port
+   (
+  	clk: in   std_logic;
+	IR:  in   std_logic_vector (31 downto 0);
+	PCout, PCin, MAin, MDout,  MDin, MDbus:  out  std_logic;
+	Cout, Cin, C1out, C2out, Gra, Grb, Grc, CONin, n:  out  std_logic;
+	IRin, Rout, Rin, Ld:  out  std_logic;
+	INC4, END_sig, ADD, SUB, OR_sig:  out  std_logic;
+	Read_sig, Write_sig, Wait_sig, Goto6, C_B, Decr: out std_logic;
+	Ain, Bin, BAout, AND_sig, SHC:  out  std_logic;
+     Result: out std_logic_vector (4 downto 0)
+   );
+end COMPONENT;
+
+Signal A_sig: std_logic_vector(31 downto 0):= x"00001111";
+Signal C_sig: std_logic_vector(31 downto 0):= x"00000000";
+Signal MainBus: std_logic_vector(31 downto 0):= x"00000000";--datain
+Signal MainBus2: std_logic_vector(31 downto 0):= x"00000000";--datain1
+Signal BusTemp: std_logic_vector(31 downto 0):= x"00000000";--dataout
+Signal BusTemp1: std_logic_vector(31 downto 0):= x"00000000";--dataout1
+Signal IR_sig: std_logic_vector(31 downto 0):= x"00000000"; 
+Signal PCout_sig,PCin_sig,MAin_sig, MDout_sig, MDin_sig, MDbus_sig,
+					Cout_sig, Cin_sig, C1out_sig,C2out_sig,Gra_sig, Grb_sig, Grc_sig, 
+					CONin_sig, n_sig,IRin_sig, Rout_sig, Rin_sig, Ld_sig, INC4_sig,END_i, ADD_sig, SUB_sig, OR_i,Read_i, Write_i, 
+					Wait_i,Goto6_sig, C_B_sig, Decr_sig,Ain_sig, Bin_sig, BAout_sig, AND_i, SHC_sig: std_logic;
+
+	
+Begin
+
+ 
+u0: ALU port map (clk_datapath,MainBus,A_sig,n,ADD, SUB, AND_sig, 
+	    OR_sig, SHC, C_B, INC4,C_sig);
+
+	
+u1: register_file port map (Rin,Gra,Grb,Grc,Rout,BAout,IR_sig,MainBus,BusTemp1);
+
+	
+u2: memory port map (clk_datapath, MAin,MDin, MDout, Write_sig, Read_sig,
+          MainBus,MainBus2, BusTemp, BusTemp1);
+
+	
+u3 : control_unit port map (clk_datapath, IR_sig,
+					PCout_sig, PCin_sig, MAin_sig, MDout_sig, MDin_sig, MDbus_sig,
+					Cout_sig, Cin_sig, C1out_sig,C2out_sig, Gra_sig, Grb_sig, Grc_sig, 
+					CONin_sig, n_sig,IRin_sig, Rout_sig, Rin_sig, Ld_sig, INC4_sig,
+					END_i, ADD_sig, SUB_sig, OR_i,Read_i, Write_i, 
+					Wait_i,Goto6_sig, C_B_sig, Decr_sig,Ain_sig, Bin_sig, BAout_sig, AND_i, SHC_sig,Opcode);
+
+end Behavioral;
+
+
+---------------------------memory code
+
+
+Library ieee;
+use ieee.std_logic_unsigned.all;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_arith.all;
+
+ 
+entity memory is
+   port
+   (clk: in  std_logic;
+	MAin: in  std_logic;
+	MDin, MDout, write_sig, read_sig:in  std_logic;
+	datain:   in  std_logic_vector(31 downto 0); --input of MA
+	datain1:  in  std_logic_vector(31 downto 0); 
+	dataout:  out std_logic_vector(31 downto 0); --output of MA
+	dataout1: out std_logic_vector(31 downto 0)
+);
+end memory;
+
+
+architecture Behavioral of memory is
+
+signal data : std_logic_vector (31 downto 0); 
+
+Begin 
+Process (write_sig, read_sig, MDout, clk, MAin, MDin)
+Begin
+if (clk'event AND clk = '1') then
+if (MAin='1') then 
+Data <= datain;
+elsif (MDin='1') then 
+data <= datain1;
+elsif (MDout = '1') then 
+dataout1 <= data;
+End if;
+
+If (read_sig = '1') then 
+dataout <= data;
+Elsif (write_sig = '1') then 
+data <= datain;
+End if;
+end if;
+End process;
+End Behavioral;
+
+
+
+
